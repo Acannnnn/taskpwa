@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { createLlmProvider } from "@/lib/llm";
 import { ParsedTaskResult, ReviewParseResult } from "@/types";
-
-const AI_PROVIDER = (process.env.NEXT_PUBLIC_AI_PROVIDER as "openai" | "deepseek" | "mock") || "mock";
-const AI_API_KEY = process.env.NEXT_PUBLIC_AI_API_KEY || "";
-const AI_MODEL = process.env.NEXT_PUBLIC_AI_MODEL || "deepseek-chat";
 
 export function useAI() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,14 +12,18 @@ export function useAI() {
     setError(null);
 
     try {
-      const provider = createLlmProvider({
-        provider: AI_PROVIDER,
-        apiKey: AI_API_KEY,
-        model: AI_MODEL,
+      const response = await fetch("/api/ai/decompose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
       });
 
-      const result = await provider.parseTasks(text);
-      return result;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "AI 解析失败");
+      }
+
+      return await response.json();
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI 解析失败");
       return null;
@@ -41,14 +40,18 @@ export function useAI() {
     setError(null);
 
     try {
-      const provider = createLlmProvider({
-        provider: AI_PROVIDER,
-        apiKey: AI_API_KEY,
-        model: AI_MODEL,
+      const response = await fetch("/api/ai/decompose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: progressText, tasks, mode: "review" }),
       });
 
-      const result = await provider.parseReview(tasks, progressText);
-      return result;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "AI 分析失败");
+      }
+
+      return await response.json();
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI 分析失败");
       return null;
